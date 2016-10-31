@@ -1,9 +1,10 @@
 <?php
 /**
  * @CMS_Amiro_version 7.0.2.0
- * @driver_version 1.1
+ * @driver_version 1.3
  * @author GateON
  * @E-mail www@smartbyte.pro
+ * @update_date 18.10.2016
  */
 
 class Interkassa2_PaymentSystemDriver extends AMI_PaymentSystemDriver{
@@ -117,7 +118,7 @@ class Interkassa2_PaymentSystemDriver extends AMI_PaymentSystemDriver{
             $data['currency'] = 'RUB';
         }
 
-	    $data['amount'] = sprintf('%.2f', $data['amount']);
+        $data['amount'] = sprintf('%.2f', $data['amount']);
 
         $arg = array(
             'ik_cur'=>$aData['currency'],
@@ -176,49 +177,52 @@ class Interkassa2_PaymentSystemDriver extends AMI_PaymentSystemDriver{
 
 
         $status = "fail";
+        if($this->checkIP()){
+            if(!empty($aPost)){
+                if ($aCheckData['ik_co_id'] == $aPost['ik_co_id']) {
 
-        if($aCheckData['ik_co_id'] == $aPost['ik_co_id']){
+                    if ($aPost['ik_inv_st'] == 'success') {
 
-            if ($aPost['ik_inv_st'] == 'success'){
+                        $this->wrlog('success');
 
-                $this->wrlog('success');
+                        if (isset($aPost['ik_pw_via']) && $aPost['ik_pw_via'] == 'test_interkassa_test_xts') {
+                            $secret_key = $aCheckData['test_key'];
+                        } else {
+                            $secret_key = $aCheckData['secret_key'];
+                        }
 
-                if(isset($aPost['ik_pw_via']) && $aPost['ik_pw_via'] == 'test_interkassa_test_xts'){
-                    $secret_key = $aCheckData['test_key'];
+                        $request_sign = $aPost['ik_sign'];
+
+                        $dataSet = [];
+
+                        foreach ($aPost as $key => $value) {
+                            if (!preg_match('/ik_/', $key)) continue;
+                            $dataSet[$key] = $value;
+                        }
+
+
+                        unset($dataSet['ik_sign']);
+                        ksort($dataSet, SORT_STRING);
+                        array_push($dataSet, $secret_key);
+                        $signString = implode(':', $dataSet);
+                        $sign = base64_encode(md5($signString, true));
+
+
+                        if ($request_sign != $sign) {
+                            $this->wrlog('Подписи не совпадают!');
+
+                        } else {
+                            $this->wrlog('Подписи совпадают!');
+
+                            $status = 'ok';
+
+                        }
+                    }
+
                 } else {
-                    $secret_key = $aCheckData['secret_key'];
-                }
-
-                $request_sign = $aPost['ik_sign'];
-
-                $dataSet = [];
-
-                foreach ($aPost as $key => $value) {
-                    if (!preg_match('/ik_/', $key)) continue;
-                    $dataSet[$key] = $value;
-                }
-
-
-                unset($dataSet['ik_sign']);
-                ksort($dataSet, SORT_STRING);
-                array_push($dataSet, $secret_key);
-                $signString = implode(':', $dataSet);
-                $sign = base64_encode(md5($signString, true));
-
-
-                if($request_sign != $sign){
-                    $this->wrlog('Подписи не совпадают!');
-
-                }else{
-                    $this->wrlog('Подписи совпадают!');
-
-                    $status = 'ok';
-
+                    $this->wrlog('params didnt match');
                 }
             }
-
-        }else{
-            $this->wrlog('params didnt match');
         }
         return $status == "ok" ?1 :0;
     }
@@ -242,9 +246,24 @@ class Interkassa2_PaymentSystemDriver extends AMI_PaymentSystemDriver{
         header('HTTP/1.0 200 OK');
         die('SUCCESS');
     }
+
+    public function checkIP(){
+        $ip_stack = array(
+            'ip_begin'=>'151.80.190.97',
+            'ip_end'=>'151.80.190.104'
+        );
+
+        if(!ip2long($_SERVER['REMOTE_ADDR'])>=ip2long($ip_stack['ip_begin']) && !ip2long($_SERVER['REMOTE_ADDR'])<=ip2long($ip_stack['ip_end'])){
+            $this->wrlog('REQUEST IP'.$_SERVER['REMOTE_ADDR'].'doesnt match');
+            die('Ты мошенник! Пшел вон отсюда!');
+        }
+        return true;
+    }
+
     public function wrlog($content){
         $file = 'log.txt';
         $doc = fopen($file, 'a');
+        file_put_contents($file, PHP_EOL .'===================='.date("H:i:s").'=====================', FILE_APPEND);
         file_put_contents($file, PHP_EOL . $content, FILE_APPEND);
         fclose($doc);
     }
