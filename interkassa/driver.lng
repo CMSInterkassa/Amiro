@@ -1,0 +1,67 @@
+%%driver_title%en%%
+Interkassa
+%%driver_title%ru%%
+Интеркасса
+
+
+%%ik_co_id%en%%
+ID cash
+%%ik_co_id%ru%%
+Идентификатор кассы
+
+%%secret_key%en%%
+Secret key
+%%secret_key%ru%%
+Секретный ключ
+
+%%test_key%en%%
+Test key
+%%test_key%ru%%
+Тестовый ключ
+
+%%api_id%en%%
+API Id
+%%api_id%ru%%
+Идентификатор API
+
+%%api_key%en%%
+API Key
+%%api_key%ru%%
+Ключ API
+
+%%button_caption%en%%
+Pay using Interkassa
+%%button_caption%ru%%
+Оплатить через Интеркасса
+
+%%api_mode%en%%
+Mode API
+%%api_mode%ru%%
+Режим api
+%%api_mode_on%en%%
+ON
+%%api_mode_on%ru%%
+Включен
+%%api_mode_off%en%%
+OFF
+%%api_mode_off%ru%%
+Выключен
+
+%%ik_test_mode%en%%
+Mode
+%%ik_test_mode%ru%%
+Режим работы
+
+%%ik_test_mode_live%en%%
+WORK
+%%ik_test_mode_live%ru%%
+Рабочая
+%%ik_test_mode_test%en%%
+TEST
+%%ik_test_mode_test%ru%%
+Тестовая
+
+%%ik_now%en%%
+NOW
+%%ik_now%ru%%
+Сейчас
