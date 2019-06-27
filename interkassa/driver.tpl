@@ -25,8 +25,13 @@
     <td>%%api_mode%%<br><b>%%ik_now%%</b><br>%%api_mode_##api_mode##%%</td>
     <td>
       <select name="api_mode">
+        ##if(api_mode=="on")##
         <option value="on" selected="selected">%%api_mode_on%%&nbsp;&nbsp;</option>
+        <option value="off">%%api_mode_off%%&nbsp;&nbsp;</option>
+        ##else##
+        <option value="on">%%api_mode_on%%&nbsp;&nbsp;</option>
         <option value="off" selected="selected">%%api_mode_off%%&nbsp;&nbsp;</option>
+        ##endif##
       </select>
     </td>
   </tr>
@@ -56,7 +61,11 @@
 "-->
 
 <!--#set var="pay_form" value="
-    <form name="payment" method="post" action="/_local/eshop/pay_drivers/interkassa/assets/pay.php" accept-charset="UTF-8">
+    ##if(api_mode=="on")##
+    <form name="payment" method="post" action="/ik_pay.php" accept-charset="UTF-8">
+    ##else##
+    <form name="payment" method="post" action="https://sci.interkassa.com/" accept-charset="UTF-8">
+    ##endif##
     <input type="hidden" name="ik_co_id" value="##ik_co_id##">
     <input type="hidden" name="ik_am" value="##amount##">
     <input type="hidden" name="ik_desc" value="##order_id##">
@@ -67,11 +76,6 @@
     <input type="hidden" name="ik_pnd_u" value="##cancel##">
     <input type="hidden" name="ik_suc_u" value="##return##">
     <input type="hidden" name="ik_ia_u" value="##callback##">
-    <input type="hidden" name="ik_nJs" value="##secret_key##">
-    <input type="hidden" name="ik_nJi" value="##api_id##">
-    <input type="hidden" name="ik_nJk" value="##api_key##">
-    <input type="hidden" name="ik_nJt" value="##ik_test_mode##">
-    <input type="hidden" name="ik_nJm" value="##api_mode##">
     </form>
     <script>document.payment.submit();</script>
 "-->

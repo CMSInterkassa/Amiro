@@ -1,10 +1,12 @@
 <?php
 class Interkassa_PaymentSystemDriver extends AMI_PaymentSystemDriver{
     protected $driverName = 'Interkassa';
+
     function format_amount(&$amount)
     {
         $amount = number_format($amount, 2, ".", "");
     }
+
     public function getPayButton(array &$aRes, array $aData, $bAutoRedirect = false){
         $res =true;
         $aRes["error"] = "Success";
@@ -110,11 +112,8 @@ class Interkassa_PaymentSystemDriver extends AMI_PaymentSystemDriver{
             'ik_ia_u'=>$aData['callback']
         );
         //Формируем цифровую подпись для отправки на Интеркассу
-        $dataSet = $arg;
-        ksort($dataSet, SORT_STRING);
-        array_push($dataSet, $aData['secret_key']);
-        $signString = implode(':', $dataSet);
-        $sign = base64_encode(md5($signString, true));
+        $sign = $this->IkSignFormation($arg, $aData['secret_key']);
+
         $data['ik_sign'] = $sign;
         $aData['ik_sign'] = $sign;
         foreach(Array("payment_url", "return", "cancel") as $fldName){
@@ -132,9 +131,12 @@ class Interkassa_PaymentSystemDriver extends AMI_PaymentSystemDriver{
         $aParams =array_merge($aGet, $aPost);
         if(!empty($aParams['status']))
             $status =$aParams['status'];
+
         return ($status == "ok");
     }
+
     public function payCallback(array $aGet, array $aPost, array &$aRes, array $aCheckData, array $aOrderData){
+
         $this->wrlog('#####################START#####################');
         foreach ($aPost as $key => $value){
             $this->wrlog($key .'=>'. $value);
@@ -146,7 +148,7 @@ class Interkassa_PaymentSystemDriver extends AMI_PaymentSystemDriver{
         }
         $this->wrlog('##################ENDCheckData##################');
         $status = "fail";
-        if($this->checkIP()||true){
+        if($this->checkIP()){
             if(!empty($aPost)){
                 if ($aCheckData['ik_co_id'] == $aPost['ik_co_id']) {
                     if ($aPost['ik_inv_st'] == 'success') {
@@ -157,16 +159,8 @@ class Interkassa_PaymentSystemDriver extends AMI_PaymentSystemDriver{
                             $secret_key = $aCheckData['secret_key'];
                         }
                         $request_sign = $aPost['ik_sign'];
-                        $dataSet = [];
-                        foreach ($aPost as $key => $value) {
-                            if (!preg_match('/ik_/', $key)) continue;
-                            $dataSet[$key] = $value;
-                        }
-                        unset($dataSet['ik_sign']);
-                        ksort($dataSet, SORT_STRING);
-                        array_push($dataSet, $secret_key);
-                        $signString = implode(':', $dataSet);
-                        $sign = base64_encode(md5($signString, true));
+
+                        $sign = $this->IkSignFormation($aPost, $secret_key);
                         if ($request_sign != $sign) {
                             $this->wrlog('Подписи не совпадают!');
                         } else {
@@ -182,11 +176,10 @@ class Interkassa_PaymentSystemDriver extends AMI_PaymentSystemDriver{
         return $status == "ok" ?1 :0;
     }
     public function getProcessOrder(array $aGet, array $aPost, array &$aRes, array $aAdditionalParams){
-        $orderId =0;
-        if(!empty($aGet["ik_co_id"]))
-            $orderId =$aGet["ik_pm_no"];
-        if(!empty($aPost["ik_pm_no"]))
-            $orderId =$aPost["ik_pm_no"];
+        $orderId = 0;
+        if(!empty($aGet["ik_co_id"]) && !empty($aPost["ik_pm_no"]))
+            $orderId = $aGet["ik_pm_no"];
+
         return intval($orderId);
     }
     public static function getOrderIdVarName(){
@@ -209,6 +202,34 @@ class Interkassa_PaymentSystemDriver extends AMI_PaymentSystemDriver{
         }
         return true;
     }
+
+    function IkSignFormation($data, $secret_key){
+        if (!empty($data['ik_sign'])) unset($data['ik_sign']);
+
+        $dataSet = array();
+        foreach ($data as $key => $value) {
+            if (!preg_match('/ik_/', $key)) continue;
+
+            $dataSet[$key] = $value;
+        }
+
+        ksort($dataSet, SORT_STRING);
+        array_push($dataSet, $secret_key);
+        $arg = implode(':', $dataSet);
+        $ik_sign = base64_encode(md5($arg, true));
+
+        return $ik_sign;
+    }
+
+    function getAnswerFromAPI($data){
+        $ch = curl_init('https://sci.interkassa.com/');
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+        return $result;
+    }
+
     public function wrlog($content){
         $file = 'log.txt';
         $doc = fopen($file, 'a');
